@@ -24,33 +24,37 @@ def root_head():
 @app.get("/execute")
 def execute(q: str = Query(...)):
 
-    q_lower = q.lower()
+    q_lower = q.lower().strip()
 
+    # 1️⃣ Ticket Status
     ticket_match = re.search(r"ticket\s+(\d+)", q_lower)
-    if "status" in q_lower and ticket_match:
-        return {
-            "name": "get_ticket_status",
-            "arguments": json.dumps({
-                "ticket_id": int(ticket_match.group(1))
-            })
-        }
+    if ticket_match and "ticket" in q_lower:
+        if "status" in q_lower:
+            return {
+                "name": "get_ticket_status",
+                "arguments": json.dumps({
+                    "ticket_id": int(ticket_match.group(1))
+                })
+            }
 
+    # 2️⃣ Meeting
     meeting_match = re.search(
-        r"on\s+(\d{4}-\d{2}-\d{2})\s+at\s+(\d{2}:\d{2})\s+in\s+(.+?)(?:\.|$)",
-        q
+        r"(\d{4}-\d{2}-\d{2}).*?(\d{2}:\d{2}).*?room\s+([a-z0-9\s]+)",
+        q_lower
     )
-    if "meeting" in q_lower and meeting_match:
+    if meeting_match:
         return {
             "name": "schedule_meeting",
             "arguments": json.dumps({
                 "date": meeting_match.group(1),
                 "time": meeting_match.group(2),
-                "meeting_room": meeting_match.group(3)
+                "meeting_room": meeting_match.group(3).strip().title()
             })
         }
 
+    # 3️⃣ Expense
     expense_match = re.search(r"employee\s+(\d+)", q_lower)
-    if "expense" in q_lower and expense_match:
+    if expense_match and "expense" in q_lower:
         return {
             "name": "get_expense_balance",
             "arguments": json.dumps({
@@ -58,8 +62,9 @@ def execute(q: str = Query(...)):
             })
         }
 
+    # 4️⃣ Bonus
     bonus_match = re.search(r"employee\s+(\d+).*?(\d{4})", q_lower)
-    if "bonus" in q_lower and bonus_match:
+    if bonus_match and "bonus" in q_lower:
         return {
             "name": "calculate_performance_bonus",
             "arguments": json.dumps({
@@ -68,18 +73,17 @@ def execute(q: str = Query(...)):
             })
         }
 
+    # 5️⃣ Office Issue
     issue_match = re.search(r"issue\s+(\d+)", q_lower)
-    dept_match = re.search(r"for\s+the\s+(.+?)\s+department", q_lower)
+    dept_match = re.search(r"department\s+([a-z\s]+)", q_lower)
     if issue_match and dept_match:
         return {
             "name": "report_office_issue",
             "arguments": json.dumps({
                 "issue_code": int(issue_match.group(1)),
-                "department": dept_match.group(1).capitalize()
+                "department": dept_match.group(1).strip().title()
             })
         }
 
-    return {
-        "name": "get_ticket_status",
-        "arguments": json.dumps({"ticket_id": 1})
-    }
+    # If nothing matched
+    return {"error": "Query not recognized"}
