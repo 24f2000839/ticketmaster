@@ -1,23 +1,9 @@
-from fastapi import FastAPI, Query
-from fastapi.middleware.cors import CORSMiddleware
-import re
-import json
-
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 @app.get("/execute")
 def execute(q: str = Query(...)):
 
     q_lower = q.lower()
 
-    # Ticket status
+    # 1️⃣ Ticket Status
     ticket_match = re.search(r"ticket\s+(\d+)", q_lower)
     if "status" in q_lower and ticket_match:
         return {
@@ -27,9 +13,9 @@ def execute(q: str = Query(...)):
             })
         }
 
-    # Meeting
+    # 2️⃣ Meeting Scheduling
     meeting_match = re.search(
-        r"on\s+(\d{4}-\d{2}-\d{2})\s+at\s+(\d{2}:\d{2})\s+in\s+(.+)",
+        r"on\s+(\d{4}-\d{2}-\d{2})\s+at\s+(\d{2}:\d{2})\s+in\s+(.+?)(?:\.|$)",
         q
     )
     if "meeting" in q_lower and meeting_match:
@@ -38,11 +24,11 @@ def execute(q: str = Query(...)):
             "arguments": json.dumps({
                 "date": meeting_match.group(1),
                 "time": meeting_match.group(2),
-                "meeting_room": meeting_match.group(3).rstrip(".")
+                "meeting_room": meeting_match.group(3)
             })
         }
 
-    # Expense
+    # 3️⃣ Expense Balance
     expense_match = re.search(r"employee\s+(\d+)", q_lower)
     if "expense" in q_lower and expense_match:
         return {
@@ -52,7 +38,7 @@ def execute(q: str = Query(...)):
             })
         }
 
-    # Bonus
+    # 4️⃣ Performance Bonus
     bonus_match = re.search(r"employee\s+(\d+).*?(\d{4})", q_lower)
     if "bonus" in q_lower and bonus_match:
         return {
@@ -63,9 +49,9 @@ def execute(q: str = Query(...)):
             })
         }
 
-    # Office issue
+    # 5️⃣ Office Issue
     issue_match = re.search(r"issue\s+(\d+)", q_lower)
-    dept_match = re.search(r"for the\s+(.+?)\s+department", q_lower)
+    dept_match = re.search(r"for\s+the\s+(.+?)\s+department", q_lower)
     if issue_match and dept_match:
         return {
             "name": "report_office_issue",
@@ -75,8 +61,4 @@ def execute(q: str = Query(...)):
             })
         }
 
-    # Fallback (VERY IMPORTANT)
-    return {
-        "name": "get_ticket_status",
-        "arguments": json.dumps({"ticket_id": 0})
-    }
+    return {"error": "Query not recognized"}
